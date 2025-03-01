@@ -1,0 +1,203 @@
+import React from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const qPCRCancerPanel = () => {
+  // Simulate qPCR amplification data for different cancer biomarkers
+  // Each array represents the fluorescence values across cycles for a specific gene target
+  const generateAmplificationCurve = (ct, efficiency, baseline) => {
+    const data = [];
+    for (let cycle = 1; cycle <= 40; cycle++) {
+      // Sigmoid curve model for qPCR amplification
+      let fluorescence;
+      if (cycle < ct - 5) {
+        // Baseline region
+        fluorescence = baseline + Math.random() * 0.05;
+      } else {
+        // Exponential and plateau regions
+        const exponent = efficiency * (cycle - ct);
+        fluorescence = baseline + (100 - baseline) / (1 + Math.exp(-exponent));
+        // Add small noise
+        fluorescence += (Math.random() - 0.5) * 2;
+      }
+      data.push({
+        cycle,
+        fluorescence: Math.max(fluorescence, baseline)
+      });
+    }
+    return data;
+  };
+
+  // Generate data for several gene targets enriched with SureSelect
+  const geneTargets = [
+    { name: 'BRCA1', ct: 22.3, efficiency: 1.2, baseline: 3.2, color: '#8884d8' },
+    { name: 'BRCA2', ct: 23.1, efficiency: 1.15, baseline: 3.4, color: '#82ca9d' },
+    { name: 'TP53', ct: 18.7, efficiency: 1.3, baseline: 3.0, color: '#ff7300' },
+    { name: 'KRAS', ct: 20.9, efficiency: 1.25, baseline: 3.3, color: '#0088fe' },
+    { name: 'EGFR', ct: 24.6, efficiency: 1.1, baseline: 3.5, color: '#ff3399' },
+    { name: 'PIK3CA', ct: 25.2, efficiency: 1.05, baseline: 3.6, color: '#8dd1e1' },
+    { name: 'NTC', ct: 38.5, efficiency: 0.8, baseline: 3.1, color: '#a4a4a4' }, // No template control
+  ];
+
+  // Create amplification curves for each target
+  const amplificationData = {};
+  geneTargets.forEach(target => {
+    amplificationData[target.name] = generateAmplificationCurve(target.ct, target.efficiency, target.baseline);
+  });
+
+  // Convert data to format suitable for Recharts
+  const chartData = [];
+  for (let cycle = 1; cycle <= 40; cycle++) {
+    const dataPoint = { cycle };
+    geneTargets.forEach(target => {
+      dataPoint[target.name] = amplificationData[target.name][cycle - 1].fluorescence;
+    });
+    chartData.push(dataPoint);
+  }
+
+  // Calculate threshold cycle values for the table
+  const thresholdValue = 25; // Fluorescence threshold
+  const calculatedCt = geneTargets.map(target => {
+    let ctValue = "N/A";
+    for (let i = 0; i < amplificationData[target.name].length - 1; i++) {
+      if (amplificationData[target.name][i].fluorescence < thresholdValue && 
+          amplificationData[target.name][i+1].fluorescence >= thresholdValue) {
+        const cycle1 = amplificationData[target.name][i].cycle;
+        const cycle2 = amplificationData[target.name][i+1].cycle;
+        const f1 = amplificationData[target.name][i].fluorescence;
+        const f2 = amplificationData[target.name][i+1].fluorescence;
+        
+        // Linear interpolation to find exact Ct
+        ctValue = cycle1 + (thresholdValue - f1) * (cycle2 - cycle1) / (f2 - f1);
+        ctValue = ctValue.toFixed(2);
+        break;
+      }
+    }
+    return { ...target, calculatedCt: ctValue };
+  });
+
+  return (
+    <div className="w-full p-4 space-y-6">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-1">qPCR Amplification Curves</h1>
+        <h2 className="text-lg text-gray-600">Cancer Panel Test with SureSelect Target Enrichment</h2>
+      </div>
+      
+      <div className="h-96">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="cycle" 
+              label={{ value: 'Cycle Number', position: 'insideBottomRight', offset: -10 }} 
+              domain={[0, 40]}
+            />
+            <YAxis 
+              label={{ value: 'Fluorescence (RFU)', angle: -90, position: 'insideLeft' }} 
+              domain={[0, 110]}
+            />
+            <Tooltip 
+              formatter={(value) => [value.toFixed(2), 'Fluorescence']}
+              labelFormatter={(value) => `Cycle ${value}`}
+            />
+            <Legend />
+            {geneTargets.map(target => (
+              <Line 
+                key={target.name}
+                type="monotone" 
+                dataKey={target.name} 
+                stroke={target.color} 
+                dot={false}
+                strokeWidth={2}
+              />
+            ))}
+            
+            {/* Threshold line */}
+            <Line 
+              dataKey={() => thresholdValue} 
+              stroke="#000000" 
+              strokeDasharray="5 5" 
+              name="Threshold" 
+              strokeWidth={1}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gene Target</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ct Value</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Efficiency</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {calculatedCt.map((target) => (
+              <tr key={target.name}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: target.color }}></div>
+                    <div className="text-sm font-medium text-gray-900">{target.name}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {target.calculatedCt}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {target.efficiency.toFixed(2)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    target.name === 'NTC' ? 
+                      (target.calculatedCt === 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') : 
+                      (target.calculatedCt !== 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
+                  }`}>
+                    {target.name === 'NTC' ? 
+                      (target.calculatedCt === 'N/A' ? 'Pass' : 'Contamination') : 
+                      (target.calculatedCt !== 'N/A' ? 'Detected' : 'Not Detected')}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded-lg shadow">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">SureSelect Target Enrichment Information</h3>
+        <p className="text-sm text-gray-500 mb-2">
+          This cancer panel test utilizes Agilent SureSelect target enrichment technology to capture targeted genomic regions related to cancer. 
+          The panel includes key genes associated with hereditary and somatic cancer mutations.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="font-medium">Panel Details:</p>
+            <ul className="list-disc pl-5 text-gray-600">
+              <li>Coverage: 93.4% of targeted regions at >100x depth</li>
+              <li>Input DNA: 50-200 ng</li>
+              <li>Enrichment method: Hybrid capture</li>
+              <li>Library prep: SureSelect QXT</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium">Analysis Parameters:</p>
+            <ul className="list-disc pl-5 text-gray-600">
+              <li>Threshold: 25 RFU</li>
+              <li>Positive call: Ct &lt; 35</li>
+              <li>Reference: Human Genome hg38</li>
+              <li>Quality control: NTC must be negative</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default qPCRCancerPanel;
