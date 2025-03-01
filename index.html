@@ -1,4 +1,119 @@
-import React from 'react';
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Data Visualization Portfolio</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+      color: #333;
+    }
+    header {
+      margin-bottom: 40px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 20px;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    .project {
+      margin: 60px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .project-header {
+      background: #f8f9fa;
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .project-content {
+      padding: 20px;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: #f8f9fa;
+      cursor: pointer;
+      border-right: 1px solid #ddd;
+    }
+    .tab.active {
+      background: white;
+      font-weight: bold;
+      border-bottom: 2px solid #4a89dc;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border: 1px solid #eee;
+    }
+    pre {
+      background: #282c34;
+      border-radius: 5px;
+      padding: 15px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: 'Consolas', monospace;
+      font-size: 14px;
+    }
+    .description {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .download-btn {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #4a89dc;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Data Visualization Portfolio</h1>
+    <p>A showcase of my data science and visualization skills, featuring interactive charts and the code used to create them.</p>
+  </header>
+
+  <!-- qPCR Cancer Panel Visualization -->
+  <div class="project">
+    <div class="project-header">
+      <h2>qPCR Amplification of Cancer Panel Test</h2>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="showTab(event, 'viz-qpcr')">Visualization</div>
+      <div class="tab" onclick="showTab(event, 'code-qpcr')">React Code</div>
+      <div class="tab" onclick="showTab(event, 'details-qpcr')">Project Details</div>
+    </div>
+    <div class="project-content">
+      <div id="viz-qpcr" class="tab-content active">
+        <img src="qpcr-cancer.png" alt="qPCR Cancer Panel Visualization">
+      </div>
+      <div id="code-qpcr" class="tab-content">
+        <pre><code class="language-jsx">import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const qPCRCancerPanel = () => {
@@ -56,148 +171,73 @@ const qPCRCancerPanel = () => {
 
   // Calculate threshold cycle values for the table
   const thresholdValue = 25; // Fluorescence threshold
-  const calculatedCt = geneTargets.map(target => {
-    let ctValue = "N/A";
-    for (let i = 0; i < amplificationData[target.name].length - 1; i++) {
-      if (amplificationData[target.name][i].fluorescence < thresholdValue && 
-          amplificationData[target.name][i+1].fluorescence >= thresholdValue) {
-        const cycle1 = amplificationData[target.name][i].cycle;
-        const cycle2 = amplificationData[target.name][i+1].cycle;
-        const f1 = amplificationData[target.name][i].fluorescence;
-        const f2 = amplificationData[target.name][i+1].fluorescence;
-        
-        // Linear interpolation to find exact Ct
-        ctValue = cycle1 + (thresholdValue - f1) * (cycle2 - cycle1) / (f2 - f1);
-        ctValue = ctValue.toFixed(2);
-        break;
-      }
-    }
-    return { ...target, calculatedCt: ctValue };
-  });
 
   return (
+    // Rest of the React component implementation...
     <div className="w-full p-4 space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-1">qPCR Amplification Curves</h1>
         <h2 className="text-lg text-gray-600">Cancer Panel Test with SureSelect Target Enrichment</h2>
       </div>
       
-      <div className="h-96">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="cycle" 
-              label={{ value: 'Cycle Number', position: 'insideBottomRight', offset: -10 }} 
-              domain={[0, 40]}
-            />
-            <YAxis 
-              label={{ value: 'Fluorescence (RFU)', angle: -90, position: 'insideLeft' }} 
-              domain={[0, 110]}
-            />
-            <Tooltip 
-              formatter={(value) => [value.toFixed(2), 'Fluorescence']}
-              labelFormatter={(value) => `Cycle ${value}`}
-            />
-            <Legend />
-            {geneTargets.map(target => (
-              <Line 
-                key={target.name}
-                type="monotone" 
-                dataKey={target.name} 
-                stroke={target.color} 
-                dot={false}
-                strokeWidth={2}
-              />
-            ))}
-            
-            {/* Threshold line */}
-            <Line 
-              dataKey={() => thresholdValue} 
-              stroke="#000000" 
-              strokeDasharray="5 5" 
-              name="Threshold" 
-              strokeWidth={1}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gene Target</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ct Value</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Efficiency</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {calculatedCt.map((target) => (
-              <tr key={target.name}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: target.color }}></div>
-                    <div className="text-sm font-medium text-gray-900">{target.name}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {target.calculatedCt}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {target.efficiency.toFixed(2)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    target.name === 'NTC' ? 
-                      (target.calculatedCt === 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') : 
-                      (target.calculatedCt !== 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
-                  }`}>
-                    {target.name === 'NTC' ? 
-                      (target.calculatedCt === 'N/A' ? 'Pass' : 'Contamination') : 
-                      (target.calculatedCt !== 'N/A' ? 'Detected' : 'Not Detected')}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="bg-gray-50 p-4 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">SureSelect Target Enrichment Information</h3>
-        <p className="text-sm text-gray-500 mb-2">
-          This cancer panel test utilizes Agilent SureSelect target enrichment technology to capture targeted genomic regions related to cancer. 
-          The panel includes key genes associated with hereditary and somatic cancer mutations.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="font-medium">Panel Details:</p>
-            <ul className="list-disc pl-5 text-gray-600">
-              <li>Coverage: 93.4% of targeted regions at >100x depth</li>
-              <li>Input DNA: 50-200 ng</li>
-              <li>Enrichment method: Hybrid capture</li>
-              <li>Library prep: SureSelect QXT</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Analysis Parameters:</p>
-            <ul className="list-disc pl-5 text-gray-600">
-              <li>Threshold: 25 RFU</li>
-              <li>Positive call: Ct &lt; 35</li>
-              <li>Reference: Human Genome hg38</li>
-              <li>Quality control: NTC must be negative</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      {/* Component implementation continued... */}
     </div>
   );
 };
 
-export default qPCRCancerPanel;
+export default qPCRCancerPanel;</code></pre>
+        <a href="qpcr-cancer-full-code.txt" class="download-btn">Download Full Code</a>
+      </div>
+      <div id="details-qpcr" class="tab-content">
+        <div class="description">
+          <h3>Project Overview</h3>
+          <p>This visualization demonstrates the analysis of a cancer panel test using SureSelect target enrichment technology. The graph displays qPCR amplification curves for multiple cancer-related genes (BRCA1, BRCA2, TP53, KRAS, EGFR, and PIK3CA) along with a no-template control.</p>
+          
+          <h3>Technologies Used</h3>
+          <ul>
+            <li><strong>React</strong> - For building the interactive user interface</li>
+            <li><strong>Recharts</strong> - For creating responsive and customizable charts</li>
+            <li><strong>Tailwind CSS</strong> - For styling components without writing custom CSS</li>
+          </ul>
+          
+          <h3>Technical Highlights</h3>
+          <ul>
+            <li>Simulation of sigmoid qPCR amplification curves with appropriate baseline, exponential, and plateau phases</li>
+            <li>Implementation of threshold cycle (Ct) calculation using linear interpolation</li>
+            <li>Dynamic data visualization with interactive tooltips and legend</li>
+            <li>Responsive design that works across different screen sizes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add more projects by copying the entire "project" div above -->
+
+  <script>
+    // Initialize syntax highlighting
+    document.addEventListener('DOMContentLoaded', (event) => {
+      document.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightBlock(block);
+      });
+    });
+    
+    // Tab switching functionality
+    function showTab(event, tabId) {
+      // Hide all tab contents
+      const tabContents = event.target.closest('.project').querySelectorAll('.tab-content');
+      tabContents.forEach(tab => tab.classList.remove('active'));
+      
+      // Remove active class from all tabs
+      const tabs = event.target.closest('.tabs').querySelectorAll('.tab');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      
+      // Show the selected tab content
+      document.getElementById(tabId).classList.add('active');
+      
+      // Add active class to the clicked tab
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
