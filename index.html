@@ -1,203 +1,308 @@
-import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>qPCR Amplification Visualization</title>
+    
+    <!-- Load Recharts via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/dist/recharts.umd.min.js"></script>
+    
+    <!-- Load Tailwind CSS via CDN for modern, responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS for additional styling and GitHub Pages compatibility -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa; /* Light, modern background */
+            color: #333;
+            line-height: 1.6;
+        }
 
-const qPCRCancerPanel = () => {
-  // Simulate qPCR amplification data for different cancer biomarkers
-  // Each array represents the fluorescence values across cycles for a specific gene target
-  const generateAmplificationCurve = (ct, efficiency, baseline) => {
-    const data = [];
-    for (let cycle = 1; cycle <= 40; cycle++) {
-      // Sigmoid curve model for qPCR amplification
-      let fluorescence;
-      if (cycle < ct - 5) {
-        // Baseline region
-        fluorescence = baseline + Math.random() * 0.05;
-      } else {
-        // Exponential and plateau regions
-        const exponent = efficiency * (cycle - ct);
-        fluorescence = baseline + (100 - baseline) / (1 + Math.exp(-exponent));
-        // Add small noise
-        fluorescence += (Math.random() - 0.5) * 2;
-      }
-      data.push({
-        cycle,
-        fluorescence: Math.max(fluorescence, baseline)
-      });
-    }
-    return data;
-  };
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #e0e0e0;
+        }
 
-  // Generate data for several gene targets enriched with SureSelect
-  const geneTargets = [
-    { name: 'BRCA1', ct: 22.3, efficiency: 1.2, baseline: 3.2, color: '#8884d8' },
-    { name: 'BRCA2', ct: 23.1, efficiency: 1.15, baseline: 3.4, color: '#82ca9d' },
-    { name: 'TP53', ct: 18.7, efficiency: 1.3, baseline: 3.0, color: '#ff7300' },
-    { name: 'KRAS', ct: 20.9, efficiency: 1.25, baseline: 3.3, color: '#0088fe' },
-    { name: 'EGFR', ct: 24.6, efficiency: 1.1, baseline: 3.5, color: '#ff3399' },
-    { name: 'PIK3CA', ct: 25.2, efficiency: 1.05, baseline: 3.6, color: '#8dd1e1' },
-    { name: 'NTC', ct: 38.5, efficiency: 0.8, baseline: 3.1, color: '#a4a4a4' }, // No template control
-  ];
+        h1, h2, h3 {
+            color: #2c3e50; /* Deep blue for headings */
+        }
 
-  // Create amplification curves for each target
-  const amplificationData = {};
-  geneTargets.forEach(target => {
-    amplificationData[target.name] = generateAmplificationCurve(target.ct, target.efficiency, target.baseline);
-  });
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
 
-  // Convert data to format suitable for Recharts
-  const chartData = [];
-  for (let cycle = 1; cycle <= 40; cycle++) {
-    const dataPoint = { cycle };
-    geneTargets.forEach(target => {
-      dataPoint[target.name] = amplificationData[target.name][cycle - 1].fluorescence;
-    });
-    chartData.push(dataPoint);
-  }
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-x: auto;
+        }
 
-  // Calculate threshold cycle values for the table
-  const thresholdValue = 25; // Fluorescence threshold
-  const calculatedCt = geneTargets.map(target => {
-    let ctValue = "N/A";
-    for (let i = 0; i < amplificationData[target.name].length - 1; i++) {
-      if (amplificationData[target.name][i].fluorescence < thresholdValue && 
-          amplificationData[target.name][i+1].fluorescence >= thresholdValue) {
-        const cycle1 = amplificationData[target.name][i].cycle;
-        const cycle2 = amplificationData[target.name][i+1].cycle;
-        const f1 = amplificationData[target.name][i].fluorescence;
-        const f2 = amplificationData[target.name][i+1].fluorescence;
-        
-        // Linear interpolation to find exact Ct
-        ctValue = cycle1 + (thresholdValue - f1) * (cycle2 - cycle1) / (f2 - f1);
-        ctValue = ctValue.toFixed(2);
-        break;
-      }
-    }
-    return { ...target, calculatedCt: ctValue };
-  });
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-  return (
-    <div className="w-full p-4 space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-1">qPCR Amplification Curves</h1>
-        <h2 className="text-lg text-gray-600">Cancer Panel Test with SureSelect Target Enrichment</h2>
-      </div>
-      
-      <div className="h-96">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="cycle" 
-              label={{ value: 'Cycle Number', position: 'insideBottomRight', offset: -10 }} 
-              domain={[0, 40]}
-            />
-            <YAxis 
-              label={{ value: 'Fluorescence (RFU)', angle: -90, position: 'insideLeft' }} 
-              domain={[0, 110]}
-            />
-            <Tooltip 
-              formatter={(value) => [value.toFixed(2), 'Fluorescence']}
-              labelFormatter={(value) => `Cycle ${value}`}
-            />
-            <Legend />
-            {geneTargets.map(target => (
-              <Line 
-                key={target.name}
-                type="monotone" 
-                dataKey={target.name} 
-                stroke={target.color} 
-                dot={false}
-                strokeWidth={2}
-              />
-            ))}
-            
-            {/* Threshold line */}
-            <Line 
-              dataKey={() => thresholdValue} 
-              stroke="#000000" 
-              strokeDasharray="5 5" 
-              name="Threshold" 
-              strokeWidth={1}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Gene Target</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ct Value</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Efficiency</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {calculatedCt.map((target) => (
-              <tr key={target.name}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: target.color }}></div>
-                    <div className="text-sm font-medium text-gray-900">{target.name}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {target.calculatedCt}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {target.efficiency.toFixed(2)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    target.name === 'NTC' ? 
-                      (target.calculatedCt === 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') : 
-                      (target.calculatedCt !== 'N/A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
-                  }`}>
-                    {target.name === 'NTC' ? 
-                      (target.calculatedCt === 'N/A' ? 'Pass' : 'Contamination') : 
-                      (target.calculatedCt !== 'N/A' ? 'Detected' : 'Not Detected')}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
 
-      <div className="bg-gray-50 p-4 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">SureSelect Target Enrichment Information</h3>
-        <p className="text-sm text-gray-500 mb-2">
-          This cancer panel test utilizes Agilent SureSelect target enrichment technology to capture targeted genomic regions related to cancer. 
-          The panel includes key genes associated with hereditary and somatic cancer mutations.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="font-medium">Panel Details:</p>
-            <ul className="list-disc pl-5 text-gray-600">
-              <li>Coverage: 93.4% of targeted regions at >100x depth</li>
-              <li>Input DNA: 50-200 ng</li>
-              <li>Enrichment method: Hybrid capture</li>
-              <li>Library prep: SureSelect QXT</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Analysis Parameters:</p>
-            <ul className="list-disc pl-5 text-gray-600">
-              <li>Threshold: 25 RFU</li>
-              <li>Positive call: Ct &lt; 35</li>
-              <li>Reference: Human Genome hg38</li>
-              <li>Quality control: NTC must be negative</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .info-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .color-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Ensure Recharts chart fits properly */
+        #chart {
+            width: 100% !important;
+            height: 400px !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 className="text-3xl font-bold text-indigo-800">qPCR Amplification Curves</h1>
+        <h2 className="text-xl text-gray-600 mt-2">Cancer Panel Test with SureSelect Target Enrichment</h2>
+    </header>
+
+    <div className="chart-container">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">Amplification Curves</h3>
+        <div id="chart"></div>
     </div>
-  );
-};
 
-export default qPCRCancerPanel;
+    <div className="table-container">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">Gene Target Analysis</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">Gene Target</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">Ct Value</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">Efficiency</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody id="geneTable"></tbody>
+        </table>
+    </div>
+
+    <div className="info-panel">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">SureSelect Target Enrichment Information</h3>
+        <p className="text-gray-600 mb-4">
+            This cancer panel test utilizes Agilent SureSelect target enrichment technology to capture targeted genomic regions related to cancer. 
+            The panel includes key genes associated with hereditary and somatic cancer mutations.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-600">
+            <div>
+                <h4 className="font-medium text-lg mb-2">Panel Details</h4>
+                <ul className="list-disc pl-5">
+                    <li>Coverage: 93.4% of targeted regions at >100x depth</li>
+                    <li>Input DNA: 50-200 ng</li>
+                    <li>Enrichment method: Hybrid capture</li>
+                    <li>Library prep: SureSelect QXT</li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-medium text-lg mb-2">Analysis Parameters</h4>
+                <ul className="list-disc pl-5">
+                    <li>Threshold: 25 RFU</li>
+                    <li>Positive call: Ct < 35</li>
+                    <li>Reference: Human Genome hg38</li>
+                    <li>Quality control: NTC must be negative</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to generate qPCR amplification curve data (matching your React code)
+        function generateAmplificationCurve(ct, efficiency, baseline) {
+            const data = [];
+            for (let cycle = 1; cycle <= 40; cycle++) {
+                let fluorescence;
+                if (cycle < ct - 5) {
+                    // Baseline region
+                    fluorescence = baseline + Math.random() * 0.05;
+                } else {
+                    // Exponential and plateau regions
+                    const exponent = efficiency * (cycle - ct);
+                    fluorescence = baseline + (100 - baseline) / (1 + Math.exp(-exponent));
+                    // Add small noise
+                    fluorescence += (Math.random() - 0.5) * 2;
+                }
+                data.push({
+                    cycle,
+                    fluorescence: Math.max(fluorescence, baseline)
+                });
+            }
+            return data;
+        }
+
+        // Define gene targets with colors (matching your React code)
+        const geneTargets = [
+            { name: 'BRCA1', ct: 22.3, efficiency: 1.2, baseline: 3.2, color: '#8884d8' },
+            { name: 'BRCA2', ct: 23.1, efficiency: 1.15, baseline: 3.4, color: '#82ca9d' },
+            { name: 'TP53', ct: 18.7, efficiency: 1.3, baseline: 3.0, color: '#ff7300' },
+            { name: 'KRAS', ct: 20.9, efficiency: 1.25, baseline: 3.3, color: '#0088fe' },
+            { name: 'EGFR', ct: 24.6, efficiency: 1.1, baseline: 3.5, color: '#ff3399' },
+            { name: 'PIK3CA', ct: 25.2, efficiency: 1.05, baseline: 3.6, color: '#8dd1e1' },
+            { name: 'NTC', ct: 38.5, efficiency: 0.8, baseline: 3.1, color: '#a4a4a4' }, // No template control
+        ];
+
+        // Generate amplification data for each target
+        const amplificationData = {};
+        geneTargets.forEach(target => {
+            amplificationData[target.name] = generateAmplificationCurve(target.ct, target.efficiency, target.baseline);
+        });
+
+        // Prepare data for the chart
+        const chartData = [];
+        for (let cycle = 1; cycle <= 40; cycle++) {
+            const dataPoint = { cycle };
+            geneTargets.forEach(target => {
+                dataPoint[target.name] = amplificationData[target.name][cycle - 1].fluorescence;
+            });
+            chartData.push(dataPoint);
+        }
+
+        // Calculate threshold cycle (Ct) values for the table
+        const thresholdValue = 25; // Fluorescence threshold
+        const calculatedCt = geneTargets.map(target => {
+            let ctValue = "N/A";
+            for (let i = 0; i < amplificationData[target.name].length - 1; i++) {
+                if (amplificationData[target.name][i].fluorescence < thresholdValue && 
+                    amplificationData[target.name][i + 1].fluorescence >= thresholdValue) {
+                    const cycle1 = amplificationData[target.name][i].cycle;
+                    const cycle2 = amplificationData[target.name][i + 1].cycle;
+                    const f1 = amplificationData[target.name][i].fluorescence;
+                    const f2 = amplificationData[target.name][i + 1].fluorescence;
+                    ctValue = (cycle1 + (thresholdValue - f1) * (cycle2 - cycle1) / (f2 - f1)).toFixed(2);
+                    break;
+                }
+            }
+            return { ...target, calculatedCt: ctValue };
+        });
+
+        // Render the Recharts LineChart (improved for GitHub Pages)
+        const chart = new Recharts.LineChart({
+            width: document.getElementById('chart').clientWidth || 800, // Default width if issue
+            height: 400,
+            data: chartData,
+            margin: { top: 5, right: 30, left: 20, bottom: 5 }
+        });
+
+        chart.addCartesianGrid({ strokeDasharray: '3 3', stroke: '#e0e0e0' });
+        chart.addXAxis({ 
+            dataKey: 'cycle', 
+            type: 'number', 
+            label: { value: 'Cycle Number', position: 'insideBottomRight', offset: -10, fill: '#666' },
+            domain: [0, 40],
+            stroke: '#666'
+        });
+        chart.addYAxis({ 
+            label: { value: 'Fluorescence (RFU)', angle: -90, position: 'insideLeft', fill: '#666' },
+            domain: [0, 110],
+            stroke: '#666'
+        });
+        chart.addTooltip({
+            formatter: (value) => [value.toFixed(2), 'Fluorescence'],
+            labelFormatter: (value) => `Cycle ${value}`,
+            contentStyle: { backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }
+        });
+        chart.addLegend();
+
+        geneTargets.forEach(target => {
+            chart.addLine({
+                type: 'monotone',
+                dataKey: target.name,
+                stroke: target.color,
+                strokeWidth: 2,
+                dot: false,
+                name: target.name
+            });
+        });
+
+        chart.addLine({
+            dataKey: () => thresholdValue,
+            stroke: '#000000',
+            strokeDasharray: '5 5',
+            name: 'Threshold',
+            strokeWidth: 1,
+            dot: false
+        });
+
+        chart.render('chart');
+
+        // Populate the gene table (matching your React structure)
+        const tableBody = document.getElementById('geneTable');
+        calculatedCt.forEach(target => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                        <div className="color-dot" style="background-color: ${target.color};"></div>
+                        <span className="text-sm font-medium text-gray-900">${target.name}</span>
+                    </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${target.calculatedCt}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${target.efficiency.toFixed(2)}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        target.name === 'NTC' 
+                            ? target.calculatedCt === 'N/A' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800' 
+                            : target.calculatedCt !== 'N/A' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                    }">
+                        ${
+                            target.name === 'NTC' 
+                                ? target.calculatedCt === 'N/A' 
+                                    ? 'Pass' 
+                                    : 'Contamination' 
+                                : target.calculatedCt !== 'N/A' 
+                                    ? 'Detected' 
+                                    : 'Not Detected'
+                        }
+                    </span>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    </script>
+</body>
+</html>
