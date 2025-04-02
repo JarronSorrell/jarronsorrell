@@ -47,7 +47,7 @@ All data is synthetically generated using biologically plausible models. The vis
 
 ## 📂 File Structure
 
-
+📁 jarronsorrell/ ├── index.html # Final site HTML (fully integrated) ├── qpcr-amplification-curves.tsx # Original AI-generated component ├── index_merged_with_qpcr.html # Backup version of merged file ├── README.md # This file
 ---
 
 ## 📢 Credits
